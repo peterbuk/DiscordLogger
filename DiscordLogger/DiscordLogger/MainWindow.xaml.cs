@@ -25,6 +25,7 @@ namespace DiscordLogger
     public partial class MainWindow : Window
     {
         readonly int NUM_CHANNELS = 13;
+        readonly int COUNTER_LOG_INTERVAL = 100; // log to counter file every # of msgs
 
         DiscordClient client;
         Dictionary<string, int> counters;
@@ -220,7 +221,7 @@ namespace DiscordLogger
                     currentMsg.Content += "\n" + newLine;
 
                 // log the total counter every 500 messages
-                if (counters["total"] % 5 == 0)
+                if (counters["total"] % COUNTER_LOG_INTERVAL == 0)
                     LogCounters();
 
                 DateTime now = DateTime.UtcNow;
