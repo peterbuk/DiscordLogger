@@ -1,0 +1,32 @@
+<?xml version="1.0"?>
+<doc>
+    <assembly>
+        <name>Discord.Net.Commands</name>
+    </assembly>
+    <members>
+        <member name="F:Discord.Commands.ParameterType.Required">
+            <summary> Catches a single required parameter. </summary>
+        </member>
+        <member name="F:Discord.Commands.ParameterType.Optional">
+            <summary> Catches a single optional parameter. </summary>
+        </member>
+        <member name="F:Discord.Commands.ParameterType.Multiple">
+            <summary> Catches a zero or more optional parameters. </summary>
+        </member>
+        <member name="F:Discord.Commands.ParameterType.Unparsed">
+            <summary> Catches all remaining text as a single optional parameter. </summary>
+        </member>
+        <member name="T:Discord.Commands.CommandService">
+            <summary> A Discord.Net client with extensions for handling common bot operations like text commands. </summary>
+        </member>
+        <member name="F:Discord.Commands.HelpMode.Disable">
+            <summary> Disable the automatic help command. </summary>
+        </member>
+        <member name="F:Discord.Commands.HelpMode.Public">
+            <summary> Use the automatic help command and respond in the channel the command is used. </summary>
+        </member>
+        <member name="F:Discord.Commands.HelpMode.Private">
+            <summary> Use the automatic help command and respond in a private message. </summary>
+        </member>
+    </members>
+</doc>
