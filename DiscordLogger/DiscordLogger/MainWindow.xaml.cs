@@ -28,19 +28,30 @@ namespace DiscordLogger
 
         DiscordClient client;
         Dictionary<string, int> counters;
+
+        string loginfile = "C:\\dlogs\\login.txt";  // lol username/password in plain text
         string filename = "C:\\dlogs\\log.csv";
+        string counterLog = "C:\\dlogs\\counter.txt";
         int[] sessionOffset;
 
         string username;
         string password;
+
+        List<Label> totalCounters;
+        Label[] sessionCounters;
+
+        DateTime sessionStartTime;
 
         public MainWindow()
         {
             InitializeComponent();
             client = new DiscordClient();
             counters = new Dictionary<string, int>();
-            AddCounters();
             sessionOffset = new int[NUM_CHANNELS];
+            sessionCounters = new Label[NUM_CHANNELS];
+            totalCounters = new List<Label>();
+
+            AddCounters();
 
             loggerCanvas.Visibility = Visibility.Collapsed;
             connectCanvas.Visibility = Visibility.Visible;
@@ -50,6 +61,14 @@ namespace DiscordLogger
 
             client.MessageReceived += Client_MessageReceived;
             client.GatewaySocket.Disconnected += GatewaySocket_Disconnected;
+
+            // preload username/pw cause lazy
+            if (File.Exists(loginfile))
+            {
+                string[] login = File.ReadAllLines(loginfile);
+                textboxUsername.Text = login[0];
+                textboxPassword.Password = login[1];
+            }
         }
 
         /*
@@ -116,8 +135,9 @@ namespace DiscordLogger
 
                 Application.Current.Dispatcher.Invoke(() =>
                 {
-                    startTime.Content = string.Format("Program Started: {0:MM/dd HH:mm:ss}", DateTime.UtcNow);
-                    sessionTime.Content = string.Format("Session Started: {0:MM/dd HH:mm:ss}", DateTime.UtcNow);
+                    sessionStartTime = DateTime.UtcNow;
+                    startTime.Content = string.Format("Program Started: {0:MM/dd HH:mm:ss}", sessionStartTime);
+                    sessionTime.Content = string.Format("Session Started: {0:MM/dd HH:mm:ss}", sessionStartTime);
                 });
             }
             catch (Exception e)
@@ -127,6 +147,7 @@ namespace DiscordLogger
                     errorLog.Content += ("connectError" + e.Message);
                 });
             }
+            LoadCounters();
         }
 
         /*
@@ -198,7 +219,20 @@ namespace DiscordLogger
                 else
                     currentMsg.Content += "\n" + newLine;
 
-                timeNow.Content = string.Format("Last MSG: {0:MM/dd HH:mm:ss}", DateTime.UtcNow);
+                // log the total counter every 500 messages
+                if (counters["total"] % 5 == 0)
+                    LogCounters();
+
+                DateTime now = DateTime.UtcNow;
+                timeNow.Content = string.Format("Last MSG: {0:MM/dd HH:mm:ss}", now);
+
+                TimeSpan duration = now - sessionStartTime;
+                elapsedTime.Content = string.Format("Time Elapsed: {0}days, {1:00}:{2:00}:{3:00}",
+                                            duration.Days,
+                                            duration.Hours,
+                                            duration.Minutes,
+                                            duration.Seconds);
+                
 
                 counter0.Content = counters["total"];
                 counter1.Content = counters["general"];
@@ -214,20 +248,55 @@ namespace DiscordLogger
                 counter11.Content = counters["skynet"];
                 counter12.Content = counters["other"];
 
-                counter0_Copy.Content = counters["total"] - sessionOffset[0];
-                counter1_Copy.Content = counters["general"] - sessionOffset[1];
-                counter2_Copy.Content = counters["miscellaneous"] - sessionOffset[2];
-                counter3_Copy.Content = counters["advice-serious"] - sessionOffset[3];
-                counter4_Copy.Content = counters["meta"] - sessionOffset[4];
-                counter5_Copy.Content = counters["anime-manga"] - sessionOffset[5];
-                counter6_Copy.Content = counters["games"] - sessionOffset[6];
-                counter7_Copy.Content = counters["kancolle"] - sessionOffset[7];
-                counter8_Copy.Content = counters["idol-heaven"] - sessionOffset[8];
-                counter9_Copy.Content = counters["fanart"] - sessionOffset[9];
-                counter10_Copy.Content = counters["nsfw"] - sessionOffset[10];
-                counter11_Copy.Content = counters["skynet"] - sessionOffset[11];
-                counter12_Copy.Content = counters["other"] - sessionOffset[12];
+
+                sessionCounter0.Content = counters["total"] - sessionOffset[0];
+                sessionCounter1.Content = counters["general"] - sessionOffset[1];
+                sessionCounter2.Content = counters["miscellaneous"] - sessionOffset[2];
+                sessionCounter3.Content = counters["advice-serious"] - sessionOffset[3];
+                sessionCounter4.Content = counters["meta"] - sessionOffset[4];
+                sessionCounter5.Content = counters["anime-manga"] - sessionOffset[5];
+                sessionCounter6.Content = counters["games"] - sessionOffset[6];
+                sessionCounter7.Content = counters["kancolle"] - sessionOffset[7];
+                sessionCounter8.Content = counters["idol-heaven"] - sessionOffset[8];
+                sessionCounter9.Content = counters["fanart"] - sessionOffset[9];
+                sessionCounter10.Content = counters["nsfw"] - sessionOffset[10];
+                sessionCounter11.Content = counters["skynet"] - sessionOffset[11];
+                sessionCounter12.Content = counters["other"] - sessionOffset[12];
             });
+        }
+
+
+        /*
+        *   Log the counters to a file
+        */
+        void LogCounters()
+        {
+            StringBuilder sb = new StringBuilder();
+            foreach (KeyValuePair<string, int> counter in counters)
+            {
+                sb.AppendLine(counter.Key +" "+counter.Value);
+            }
+            
+            File.WriteAllText(counterLog, sb.ToString());
+        }
+
+
+        /*
+        *   Load total counters from file
+        */
+        void LoadCounters()
+        {
+            string[] counterData = File.ReadAllLines(counterLog);
+
+            foreach(string countertext in counterData)
+            {   
+                // split on space, then read key value pair
+                string[] channel = countertext.Split(' ');
+                counters[channel[0]] = Int32.Parse(channel[1]);
+            }
+
+            // set session offsets properly
+            ResetSession(null, null);
         }
 
 
@@ -246,6 +315,37 @@ namespace DiscordLogger
             counters.Add("nsfw", 0);
             counters.Add("skynet", 0);
             counters.Add("other", 0);
+
+            // add totalLabels to array
+            totalCounters.Add(counter0);
+            totalCounters.Add(counter1);
+            totalCounters.Add(counter2);
+            totalCounters.Add(counter3);
+            totalCounters.Add(counter4);
+            totalCounters.Add(counter5);
+            totalCounters.Add(counter6);
+            totalCounters.Add(counter7);
+            totalCounters.Add(counter8);
+            totalCounters.Add(counter9);
+            totalCounters.Add(counter10);
+            totalCounters.Add(counter11);
+            totalCounters.Add(counter12);
+
+
+            // add sessionLabels to array
+            sessionCounters[0] = sessionCounter0;
+            sessionCounters[1] = sessionCounter1;
+            sessionCounters[2] = sessionCounter2;
+            sessionCounters[3] = sessionCounter3;
+            sessionCounters[4] = sessionCounter4;
+            sessionCounters[5] = sessionCounter5;
+            sessionCounters[6] = sessionCounter6;
+            sessionCounters[7] = sessionCounter7;
+            sessionCounters[8] = sessionCounter8;
+            sessionCounters[9] = sessionCounter9;
+            sessionCounters[10] = sessionCounter10;
+            sessionCounters[11] = sessionCounter11;
+            sessionCounters[12] = sessionCounter12;
         }
 
         /*
@@ -271,22 +371,14 @@ namespace DiscordLogger
 
             Application.Current.Dispatcher.Invoke(() =>
             {
-                sessionTime.Content = string.Format("Session Started: {0:MM/dd HH:mm:ss}", DateTime.UtcNow);
-
+                sessionStartTime = DateTime.UtcNow;
+                sessionTime.Content = string.Format("Session Started: {0:MM/dd HH:mm:ss}", sessionStartTime);
+                
                 // reset session counters on GUI
-                counter0_Copy.Content = 0;
-                counter1_Copy.Content = 0;
-                counter2_Copy.Content = 0;
-                counter3_Copy.Content = 0;
-                counter4_Copy.Content = 0;
-                counter5_Copy.Content = 0;
-                counter6_Copy.Content = 0;
-                counter7_Copy.Content = 0;
-                counter8_Copy.Content = 0;
-                counter9_Copy.Content = 0;
-                counter10_Copy.Content = 0;
-                counter11_Copy.Content = 0;
-                counter12_Copy.Content = 0;
+                foreach (Label sessionCounter in sessionCounters)
+                {
+                    sessionCounter.Content = 0;
+                }
             });
         }
     }
