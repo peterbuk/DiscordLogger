@@ -31,6 +31,9 @@ namespace DiscordLogger
         string filename = "C:\\dlogs\\log.csv";
         int[] sessionOffset;
 
+        string username;
+        string password;
+
         public MainWindow()
         {
             InitializeComponent();
@@ -39,32 +42,75 @@ namespace DiscordLogger
             AddCounters();
             sessionOffset = new int[NUM_CHANNELS];
 
-            ConnectToServer();
+            loggerCanvas.Visibility = Visibility.Collapsed;
+            connectCanvas.Visibility = Visibility.Visible;
+
+            buttonLogin.Click += ButtonLogin_Click;
+            this.Closing += MainWindow_Closing;
 
             client.MessageReceived += Client_MessageReceived;
             client.GatewaySocket.Disconnected += GatewaySocket_Disconnected;
         }
 
-        private void GatewaySocket_Disconnected(object sender, DisconnectedEventArgs e)
+        /*
+        *   Warning when user tries to close   
+        */
+        private void MainWindow_Closing(object sender, System.ComponentModel.CancelEventArgs e)
         {
-            statusLabel.Content = "Disconnected";
-            while (client.State == ConnectionState.Disconnected)
+            if (MessageBox.Show("Do you want to exit?", "Confirm", MessageBoxButton.YesNo) == MessageBoxResult.Yes)
             {
-                Application.Current.Dispatcher.Invoke(() =>
-                {
-                    errorLog.Content += ("Trying to reconnect");
-                });
-                ConnectToServer();  // try to reconnect
-                System.Threading.Thread.Sleep(5000);
+                Application.Current.Shutdown();
+            }
+            else
+            {
+                e.Cancel = true;
             }
         }
 
+        /*
+        *   Login using the given email and password.
+        *   Currently no error checking!
+        */
+        private void ButtonLogin_Click(object sender, RoutedEventArgs e)
+        {
+            username = textboxUsername.Text;
+            password = textboxPassword.Password;
+
+            ConnectToServer();
+
+            loggerCanvas.Visibility = Visibility.Visible;
+            connectCanvas.Visibility = Visibility.Collapsed;
+        }
+
+        /*
+        *   Attempt to reconnect when disconnected.
+        *   Untested.
+        */
+        private void GatewaySocket_Disconnected(object sender, DisconnectedEventArgs e)
+        {
+            Application.Current.Dispatcher.Invoke(() =>
+            {
+                statusLabel.Content = "Disconnected";
+            
+                while (client.State == ConnectionState.Disconnected)
+                {
+                    errorLog.Content += ("Trying to reconnect");
+                    ConnectToServer();  // try to reconnect
+                    System.Threading.Thread.Sleep(5000);
+                }
+            });
+        }
+
+
+        /*
+        *   Connect to Discord, and create a new log file with current timestamp
+        */
         async void ConnectToServer()
         {
             filename = string.Format("C:\\dlogs\\log-{0:MM-dd HH-mm-ss}.csv", DateTime.UtcNow);
             try
             {
-                string x = await client.Connect("coolgame88@hotmail.com", "bukbot");
+                string x = await client.Connect(username, password);
 
                 statusLabel.Content = "Connected";
 
@@ -73,7 +119,6 @@ namespace DiscordLogger
                     startTime.Content = string.Format("Program Started: {0:MM/dd HH:mm:ss}", DateTime.UtcNow);
                     sessionTime.Content = string.Format("Session Started: {0:MM/dd HH:mm:ss}", DateTime.UtcNow);
                 });
-
             }
             catch (Exception e)
             {
@@ -84,6 +129,9 @@ namespace DiscordLogger
             }
         }
 
+        /*
+        *   Log a received message
+        */
         void Client_MessageReceived(object sender, MessageEventArgs e)
         {
             StringBuilder csv = new StringBuilder();
@@ -124,8 +172,6 @@ namespace DiscordLogger
                 counters["other"]++;
             UpdateCounters(newLine);
 
-
-
             try
             {
                 File.AppendAllText(filename, csv.ToString());
@@ -140,6 +186,9 @@ namespace DiscordLogger
         }
 
 
+        /*
+        *   Update message counters
+        */
         void UpdateCounters(string newLine)
         {
             Application.Current.Dispatcher.Invoke(() =>
@@ -199,8 +248,11 @@ namespace DiscordLogger
             counters.Add("other", 0);
         }
 
-        // reset counter offset
-        private void button_Click(object sender, RoutedEventArgs e)
+        /*
+        *   Reset session counter by saving the offset
+        *
+        */
+        private void ResetSession(object sender, RoutedEventArgs e)
         {
             // save offset
             sessionOffset[0] = counters["total"];
@@ -221,7 +273,7 @@ namespace DiscordLogger
             {
                 sessionTime.Content = string.Format("Session Started: {0:MM/dd HH:mm:ss}", DateTime.UtcNow);
 
-                // reset session counters
+                // reset session counters on GUI
                 counter0_Copy.Content = 0;
                 counter1_Copy.Content = 0;
                 counter2_Copy.Content = 0;

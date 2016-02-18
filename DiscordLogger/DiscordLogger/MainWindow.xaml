@@ -8,40 +8,50 @@
         Title="DiscordLogger" Height="479" Width="525">
     <Canvas>
         <Label x:Name="statusLabel" Content="Not Connected" HorizontalAlignment="Left" VerticalAlignment="Top" Width="147" HorizontalContentAlignment="Right" Canvas.Left="360"/>
-        <Label x:Name="counter0" Content="0" HorizontalAlignment="Left" VerticalAlignment="Top" Width="84" FontWeight="Bold" Canvas.Left="95" Canvas.Top="32"/>
-        <TextBlock x:Name="textBlock" HorizontalAlignment="Left" TextWrapping="Wrap" VerticalAlignment="Top" Height="300" Width="90" TextAlignment="Right" LineHeight="21.333" Canvas.Top="37"><Run FontWeight="Bold" Text="total:"/><LineBreak/><Run Text="general:"/><LineBreak/><Run Text="miscell"/><Run Text="aneous:"/><LineBreak/><Run Text="advice-serious:"/><LineBreak/><Run Text="meta:"/><LineBreak/><Run Text="anime-manga"/><Run Text=":"/><LineBreak/><Run Text="games:"/><LineBreak/><Run Text="kancolle:"/><LineBreak/><Run Text="idol-heaven:"/><LineBreak/><Run Text="fanart:"/><LineBreak/><Run Text="nsfw:"/><LineBreak/><Run Text="skynet:"/><LineBreak/><Run Text="other:"/></TextBlock>
-        <Label x:Name="counter1" Content="0" HorizontalAlignment="Left" VerticalAlignment="Top" Width="84" Canvas.Left="95" Canvas.Top="53"/>
-        <Label x:Name="counter2" Content="0" HorizontalAlignment="Left" VerticalAlignment="Top" Width="84" Canvas.Left="95" Canvas.Top="75"/>
-        <Label x:Name="counter3" Content="0" HorizontalAlignment="Left" VerticalAlignment="Top" Width="84" Canvas.Left="95" Canvas.Top="96"/>
-        <Label x:Name="counter4" Content="0" HorizontalAlignment="Left" VerticalAlignment="Top" Width="84" Canvas.Left="95" Canvas.Top="117"/>
-        <Label x:Name="counter5" Content="0" HorizontalAlignment="Left" VerticalAlignment="Top" Width="84" Canvas.Left="95" Canvas.Top="139"/>
-        <Label x:Name="counter6" Content="0" HorizontalAlignment="Left" VerticalAlignment="Top" Width="84" Canvas.Left="95" Canvas.Top="162"/>
-        <Label x:Name="counter7" Content="0" HorizontalAlignment="Left" VerticalAlignment="Top" Width="84" Canvas.Left="95" Canvas.Top="182"/>
-        <Label x:Name="counter8" Content="0" HorizontalAlignment="Left" VerticalAlignment="Top" Width="84" Canvas.Left="95" Canvas.Top="205"/>
-        <Label x:Name="counter9" Content="0" HorizontalAlignment="Left" VerticalAlignment="Top" Width="84" Canvas.Left="95" Canvas.Top="226"/>
-        <Label x:Name="counter10" Content="0" HorizontalAlignment="Left" VerticalAlignment="Top" Width="84" Canvas.Left="95" Canvas.Top="248"/>
-        <Label x:Name="counter11" Content="0" HorizontalAlignment="Left" VerticalAlignment="Top" Width="84" Canvas.Left="95" Canvas.Top="270"/>
-        <Label x:Name="currentMsg" Content="" HorizontalAlignment="Left" VerticalAlignment="Top" Width="517" FontSize="8" Height="129" Canvas.Top="317"/>
-        <Label x:Name="counter12" Content="0" HorizontalAlignment="Left" VerticalAlignment="Top" Width="84" Canvas.Left="95" Canvas.Top="292"/>
-        <Label x:Name="startTime" Content="Program Started:" HorizontalAlignment="Left" VerticalAlignment="Top" Width="204" HorizontalContentAlignment="Right" Canvas.Left="303" Canvas.Top="100"/>
-        <Label x:Name="timeNow" Content="Last MSG:" HorizontalAlignment="Left" VerticalAlignment="Top" Width="204" HorizontalContentAlignment="Right" Canvas.Left="303" Canvas.Top="147"/>
-        <Label x:Name="errorLog" Content="" HorizontalAlignment="Left" VerticalAlignment="Top" Height="128" Width="214" FontSize="9.333" Canvas.Left="303" Canvas.Top="159"/>
-        <Button x:Name="button" Content="Reset Session" HorizontalAlignment="Left" VerticalAlignment="Top" Width="87" Click="button_Click" Canvas.Left="420" Canvas.Top="32"/>
-        <Label x:Name="counter0_Copy" Content="0" HorizontalAlignment="Left" VerticalAlignment="Top" Width="84" FontWeight="Bold" Canvas.Left="205" Canvas.Top="32"/>
-        <Label x:Name="counter1_Copy" Content="0" HorizontalAlignment="Left" VerticalAlignment="Top" Width="84" Canvas.Left="205" Canvas.Top="53"/>
-        <Label x:Name="counter2_Copy" Content="0" HorizontalAlignment="Left" VerticalAlignment="Top" Width="84" Canvas.Left="205" Canvas.Top="75"/>
-        <Label x:Name="counter3_Copy" Content="0" HorizontalAlignment="Left" VerticalAlignment="Top" Width="84" Canvas.Left="205" Canvas.Top="96"/>
-        <Label x:Name="counter4_Copy" Content="0" HorizontalAlignment="Left" VerticalAlignment="Top" Width="84" Canvas.Left="205" Canvas.Top="117"/>
-        <Label x:Name="counter5_Copy" Content="0" HorizontalAlignment="Left" VerticalAlignment="Top" Width="84" Canvas.Left="205" Canvas.Top="139"/>
-        <Label x:Name="counter6_Copy" Content="0" HorizontalAlignment="Left" VerticalAlignment="Top" Width="84" Canvas.Left="205" Canvas.Top="162"/>
-        <Label x:Name="counter7_Copy" Content="0" HorizontalAlignment="Left" VerticalAlignment="Top" Width="84" Canvas.Left="205" Canvas.Top="182"/>
-        <Label x:Name="counter8_Copy" Content="0" HorizontalAlignment="Left" VerticalAlignment="Top" Width="84" Canvas.Left="205" Canvas.Top="205"/>
-        <Label x:Name="counter9_Copy" Content="0" HorizontalAlignment="Left" VerticalAlignment="Top" Width="84" Canvas.Left="205" Canvas.Top="226"/>
-        <Label x:Name="counter10_Copy" Content="0" HorizontalAlignment="Left" VerticalAlignment="Top" Width="84" Canvas.Left="205" Canvas.Top="248"/>
-        <Label x:Name="counter11_Copy" Content="0" HorizontalAlignment="Left" VerticalAlignment="Top" Width="84" Canvas.Left="205" Canvas.Top="270"/>
-        <Label x:Name="counter12_Copy" Content="0" HorizontalAlignment="Left" VerticalAlignment="Top" Width="84" Canvas.Left="205" Canvas.Top="292"/>
-        <Label x:Name="label" Content="Total                        Session" HorizontalAlignment="Left" VerticalAlignment="Top" Width="172" FontWeight="Bold" Canvas.Left="95" Canvas.Top="6"/>
-        <Label x:Name="sessionTime" Content="Session Started:" HorizontalAlignment="Left" VerticalAlignment="Top" Width="194" HorizontalContentAlignment="Right" Canvas.Left="313" Canvas.Top="124"/>
+        <Canvas x:Name="loggerCanvas" Height="331" Canvas.Top="6" Width="289">
+            <TextBlock x:Name="channelLabels" HorizontalAlignment="Left" TextWrapping="Wrap" VerticalAlignment="Top" Height="300" Width="90" TextAlignment="Right" LineHeight="21.333" Canvas.Top="31"><Run FontWeight="Bold" Text="total:"/><LineBreak/><Run Text="general:"/><LineBreak/><Run Text="miscell"/><Run Text="aneous:"/><LineBreak/><Run Text="advice-serious:"/><LineBreak/><Run Text="meta:"/><LineBreak/><Run Text="anime-manga"/><Run Text=":"/><LineBreak/><Run Text="games:"/><LineBreak/><Run Text="kancolle:"/><LineBreak/><Run Text="idol-heaven:"/><LineBreak/><Run Text="fanart:"/><LineBreak/><Run Text="nsfw:"/><LineBreak/><Run Text="skynet:"/><LineBreak/><Run Text="other:"/></TextBlock>
+            <Label x:Name="topLabels" Content="Total                        Session" HorizontalAlignment="Left" VerticalAlignment="Top" Width="172" FontWeight="Bold" Canvas.Left="95"/>
+            <Label x:Name="counter0" Content="0" HorizontalAlignment="Left" VerticalAlignment="Top" Width="84" FontWeight="Bold" Canvas.Left="95" Canvas.Top="26"/>
+            <Label x:Name="counter1" Content="0" HorizontalAlignment="Left" VerticalAlignment="Top" Width="84" Canvas.Left="95" Canvas.Top="47"/>
+            <Label x:Name="counter2" Content="0" HorizontalAlignment="Left" VerticalAlignment="Top" Width="84" Canvas.Left="95" Canvas.Top="69"/>
+            <Label x:Name="counter3" Content="0" HorizontalAlignment="Left" VerticalAlignment="Top" Width="84" Canvas.Left="95" Canvas.Top="90"/>
+            <Label x:Name="counter4" Content="0" HorizontalAlignment="Left" VerticalAlignment="Top" Width="84" Canvas.Left="95" Canvas.Top="111"/>
+            <Label x:Name="counter5" Content="0" HorizontalAlignment="Left" VerticalAlignment="Top" Width="84" Canvas.Left="95" Canvas.Top="133"/>
+            <Label x:Name="counter6" Content="0" HorizontalAlignment="Left" VerticalAlignment="Top" Width="84" Canvas.Left="95" Canvas.Top="156"/>
+            <Label x:Name="counter7" Content="0" HorizontalAlignment="Left" VerticalAlignment="Top" Width="84" Canvas.Left="95" Canvas.Top="176"/>
+            <Label x:Name="counter8" Content="0" HorizontalAlignment="Left" VerticalAlignment="Top" Width="84" Canvas.Left="95" Canvas.Top="199"/>
+            <Label x:Name="counter9" Content="0" HorizontalAlignment="Left" VerticalAlignment="Top" Width="84" Canvas.Left="95" Canvas.Top="220"/>
+            <Label x:Name="counter10" Content="0" HorizontalAlignment="Left" VerticalAlignment="Top" Width="84" Canvas.Left="95" Canvas.Top="242"/>
+            <Label x:Name="counter11" Content="0" HorizontalAlignment="Left" VerticalAlignment="Top" Width="84" Canvas.Left="95" Canvas.Top="264"/>
+            <Label x:Name="counter12" Content="0" HorizontalAlignment="Left" VerticalAlignment="Top" Width="84" Canvas.Left="95" Canvas.Top="286"/>
+            <Label x:Name="counter0_Copy" Content="0" HorizontalAlignment="Left" VerticalAlignment="Top" Width="84" FontWeight="Bold" Canvas.Left="205" Canvas.Top="26"/>
+            <Label x:Name="counter1_Copy" Content="0" HorizontalAlignment="Left" VerticalAlignment="Top" Width="84" Canvas.Left="205" Canvas.Top="47"/>
+            <Label x:Name="counter2_Copy" Content="0" HorizontalAlignment="Left" VerticalAlignment="Top" Width="84" Canvas.Left="205" Canvas.Top="69"/>
+            <Label x:Name="counter3_Copy" Content="0" HorizontalAlignment="Left" VerticalAlignment="Top" Width="84" Canvas.Left="205" Canvas.Top="90"/>
+            <Label x:Name="counter4_Copy" Content="0" HorizontalAlignment="Left" VerticalAlignment="Top" Width="84" Canvas.Left="205" Canvas.Top="111"/>
+            <Label x:Name="counter5_Copy" Content="0" HorizontalAlignment="Left" VerticalAlignment="Top" Width="84" Canvas.Left="205" Canvas.Top="133"/>
+            <Label x:Name="counter6_Copy" Content="0" HorizontalAlignment="Left" VerticalAlignment="Top" Width="84" Canvas.Left="205" Canvas.Top="156"/>
+            <Label x:Name="counter7_Copy" Content="0" HorizontalAlignment="Left" VerticalAlignment="Top" Width="84" Canvas.Left="205" Canvas.Top="176"/>
+            <Label x:Name="counter8_Copy" Content="0" HorizontalAlignment="Left" VerticalAlignment="Top" Width="84" Canvas.Left="205" Canvas.Top="199"/>
+            <Label x:Name="counter9_Copy" Content="0" HorizontalAlignment="Left" VerticalAlignment="Top" Width="84" Canvas.Left="205" Canvas.Top="220"/>
+            <Label x:Name="counter10_Copy" Content="0" HorizontalAlignment="Left" VerticalAlignment="Top" Width="84" Canvas.Left="205" Canvas.Top="242"/>
+            <Label x:Name="counter11_Copy" Content="0" HorizontalAlignment="Left" VerticalAlignment="Top" Width="84" Canvas.Left="205" Canvas.Top="264"/>
+            <Label x:Name="counter12_Copy" Content="0" HorizontalAlignment="Left" VerticalAlignment="Top" Width="84" Canvas.Left="205" Canvas.Top="286"/>
+            <Label x:Name="currentMsg" Content="" HorizontalAlignment="Left" VerticalAlignment="Top" Width="517" FontSize="8" Height="129" Canvas.Top="317"/>
+            <Label x:Name="startTime" Content="Program Started:" HorizontalAlignment="Left" VerticalAlignment="Top" Width="204" HorizontalContentAlignment="Right" Canvas.Left="303" Canvas.Top="100"/>
+            <Label x:Name="timeNow" Content="Last MSG:" HorizontalAlignment="Left" VerticalAlignment="Top" Width="204" HorizontalContentAlignment="Right" Canvas.Left="303" Canvas.Top="147"/>
+            <Label x:Name="errorLog" Content="" HorizontalAlignment="Left" VerticalAlignment="Top" Height="128" Width="214" FontSize="9.333" Canvas.Left="303" Canvas.Top="159"/>
+            <Button x:Name="buttonReset" Content="Reset Session" HorizontalAlignment="Left" VerticalAlignment="Top" Width="87" Click="ResetSession" Canvas.Left="420" Canvas.Top="32"/>
+            <Label x:Name="sessionTime" Content="Session Started:" HorizontalAlignment="Left" VerticalAlignment="Top" Width="194" HorizontalContentAlignment="Right" Canvas.Left="313" Canvas.Top="124"/>
+        </Canvas>
+        <Canvas x:Name="connectCanvas" Height="221" Width="313" Canvas.Left="94" Canvas.Top="104.693" Visibility="Collapsed">
+            <Label Content="Email:" Canvas.Left="24" Canvas.Top="69"/>
+            <Label Content="Password:" Canvas.Left="2.37" Canvas.Top="99.96"/>
+            <Label Content="Discord Login" Canvas.Left="83" Canvas.Top="22" FontSize="26.667" FontFamily="Corbel"/>
+            <TextBox x:Name="textboxUsername" Height="23" Canvas.Left="69.927" TextWrapping="Wrap" Canvas.Top="71.96" Width="218.073"/>
+            <PasswordBox x:Name="textboxPassword" Canvas.Left="69.927" Canvas.Top="99.96" Width="218.073" Height="25.96"/>
+            <Button x:Name="buttonLogin" Content="Login" Canvas.Left="126.63" Canvas.Top="152" Width="75" IsDefault="True"/>
+        </Canvas>
 
     </Canvas>
 </Window>
