@@ -4,16 +4,16 @@
         <name>Discord.Net.Modules</name>
     </assembly>
     <members>
-        <member name="F:Discord.Modules.FilterType.Unrestricted">
-            <summary> Disables the event and command filtesr. </summary>
+        <member name="F:Discord.Modules.ModuleFilter.None">
+            <summary> Disables the event and command filters. </summary>
         </member>
-        <member name="F:Discord.Modules.FilterType.ServerWhitelist">
+        <member name="F:Discord.Modules.ModuleFilter.ServerWhitelist">
             <summary> Uses the server whitelist to filter events and commands. </summary>
         </member>
-        <member name="F:Discord.Modules.FilterType.ChannelWhitelist">
+        <member name="F:Discord.Modules.ModuleFilter.ChannelWhitelist">
             <summary> Uses the channel whitelist to filter events and commands.  </summary>
         </member>
-        <member name="F:Discord.Modules.FilterType.AllowPrivate">
+        <member name="F:Discord.Modules.ModuleFilter.AlwaysAllowPrivate">
             <summary> Enables this module in all private messages.  </summary>
         </member>
     </members>
