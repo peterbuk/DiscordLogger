@@ -208,7 +208,10 @@ namespace DiscordLogger
             if (msg.IsMentioningMe() && (msg.User.HasRole(admin) || msg.User.HasRole(founder)))
             {
                 if (msg.Text.Contains("~status"))
+                {
                     SendUpdateMsg(e.Channel);
+                    File.WriteAllText(statuslog, string.Format("{0} called ~status at {1:MM/dd HH:mm:ss}", msg.User.Name, msg.Timestamp));
+                }
             }
             LogMessage(msg);
         }
@@ -458,17 +461,20 @@ namespace DiscordLogger
         */
         void LoadCounters()
         {
-            string[] counterData = File.ReadAllLines(counterLog);
+            if (File.Exists(counterLog))
+            { 
+                string[] counterData = File.ReadAllLines(counterLog);
 
-            foreach (string countertext in counterData)
-            {
-                // split on space, then read key value pair
-                string[] channel = countertext.Split(' ');
-                counters[channel[0]] = Int32.Parse(channel[1]);
+                foreach (string countertext in counterData)
+                {
+                    // split on space, then read key value pair
+                    string[] channel = countertext.Split(' ');
+                    counters[channel[0]] = Int32.Parse(channel[1]);
+                }
+
+                // set session offsets properly
+                ResetSession(null, null);
             }
-
-            // set session offsets properly
-            ResetSession(null, null);
         }
         #endregion
     }
