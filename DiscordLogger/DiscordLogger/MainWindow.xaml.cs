@@ -16,6 +16,8 @@ using Discord;
 using DiscordLogger;
 using Discord.Legacy;
 using System.IO;
+using System.Collections.Specialized;
+using System.Threading;
 
 namespace DiscordLogger
 {
@@ -29,19 +31,30 @@ namespace DiscordLogger
 
         DiscordClient client;
         Dictionary<string, int> counters;
+        string[] channels;
 
         string loginfile = "C:\\dlogs\\login.txt";  // lol username/password in plain text
-        string filename = "C:\\dlogs\\log.csv";
+        string filename = "C:\\dlogs\\log-";
+        string fileExt = ".csv";
         string counterLog = "C:\\dlogs\\counter.txt";
-        int[] sessionOffset;
+        string statuslog = "C:\\dlogs\\status.txt";
+
+        Role admin;
+        Role founder;
+        bool gotRoles = false;
 
         string username;
         string password;
 
-        List<Label> totalCounters;
-        Label[] sessionCounters;
+        int[] sessionOffset;
+        List<Label> totalCounterLabels;
+        List<Label> sessionCounterLabels;
 
+        DateTime programStartTime;
         DateTime sessionStartTime;
+        DateTime now;
+        DateTime nextDay;
+        Timer dateTimer;
 
         public MainWindow()
         {
@@ -49,8 +62,12 @@ namespace DiscordLogger
             client = new DiscordClient();
             counters = new Dictionary<string, int>();
             sessionOffset = new int[NUM_CHANNELS];
-            sessionCounters = new Label[NUM_CHANNELS];
-            totalCounters = new List<Label>();
+            sessionCounterLabels = new List<Label>();
+            totalCounterLabels = new List<Label>();
+
+            now = DateTime.UtcNow;
+            nextDay = now.AddDays(1);   // used to reset session everyday
+            dateTimer = new Timer(NewDay, null, nextDay - now, TimeSpan.FromHours(24));
 
             AddCounters();
 
@@ -62,6 +79,7 @@ namespace DiscordLogger
 
             client.MessageReceived += Client_MessageReceived;
             client.GatewaySocket.Disconnected += GatewaySocket_Disconnected;
+            client.GatewaySocket.Connected += GatewaySocket_Connected;
 
             // preload username/pw cause lazy
             if (File.Exists(loginfile))
@@ -71,6 +89,8 @@ namespace DiscordLogger
                 textboxPassword.Password = login[1];
             }
         }
+
+
 
         /*
         *   Warning when user tries to close   
@@ -104,20 +124,39 @@ namespace DiscordLogger
 
         /*
         *   Attempt to reconnect when disconnected.
-        *   Untested.
         */
         private void GatewaySocket_Disconnected(object sender, DisconnectedEventArgs e)
         {
             Application.Current.Dispatcher.Invoke(() =>
             {
                 statusLabel.Content = "Disconnected";
-            
+                string status = string.Format("Disconnected at {0:MM/dd HH:mm:ss}\n", now);
+                errorLog.Content += status;
+                File.AppendAllText(statuslog, status);
+
                 while (client.State == ConnectionState.Disconnected)
                 {
-                    errorLog.Content += ("Trying to reconnect");
+                    statusLabel.Content = "Disconnected";
                     ConnectToServer();  // try to reconnect
                     System.Threading.Thread.Sleep(5000);
                 }
+            });
+        }
+
+        /*
+        *   Connected event
+        */
+        private void GatewaySocket_Connected(object sender, EventArgs e)
+        {
+            Application.Current.Dispatcher.Invoke(() =>
+            {
+                if (client.State == ConnectionState.Connected)
+                {
+                    statusLabel.Content = "Connected";
+                    string status = string.Format("Connected at {0:MM/dd HH:mm:ss}\n", now);
+                    errorLog.Content += status;
+                    File.AppendAllText(statuslog, status);
+                 }
             });
         }
 
@@ -127,17 +166,15 @@ namespace DiscordLogger
         */
         async void ConnectToServer()
         {
-            filename = string.Format("C:\\dlogs\\log-{0:MM-dd HH-mm-ss}.csv", DateTime.UtcNow);
             try
             {
                 string x = await client.Connect(username, password);
 
-                statusLabel.Content = "Connected";
-
                 Application.Current.Dispatcher.Invoke(() =>
                 {
+                    programStartTime = DateTime.UtcNow;
                     sessionStartTime = DateTime.UtcNow;
-                    startTime.Content = string.Format("Program Started: {0:MM/dd HH:mm:ss}", sessionStartTime);
+                    startTime.Content = string.Format("Program Started: {0:MM/dd HH:mm:ss}", programStartTime);
                     sessionTime.Content = string.Format("Session Started: {0:MM/dd HH:mm:ss}", sessionStartTime);
                 });
             }
@@ -156,9 +193,49 @@ namespace DiscordLogger
         */
         void Client_MessageReceived(object sender, MessageEventArgs e)
         {
-            StringBuilder csv = new StringBuilder();
             Message msg = e.Message;
 
+            // run once
+            if (!gotRoles)
+                GetRoles(e);
+
+            // don't log own messages
+            if (msg.IsAuthor)
+                return;
+
+            // status update TODO: expand to admins/founders
+            //msg.User.Id == 105167204500123648
+            if (msg.IsMentioningMe() && (msg.User.HasRole(admin) || msg.User.HasRole(founder)))
+            {
+                if (msg.Text.Contains("~status"))
+                    SendUpdateMsg(e.Channel);
+            }
+            LogMessage(msg);
+        }
+
+
+        /*
+        *   Fetch the roles of admin/founder
+        */
+        private void GetRoles(MessageEventArgs e)
+        {
+            IEnumerable<Role> roles = e.Server.Roles;
+            foreach (Role role in roles)
+            {
+                if (role.Name == "@Admin")
+                    admin = role;
+                if (role.Name == "@founder")
+                    founder = role;
+            }
+            gotRoles = true;
+        }
+
+
+        /*
+        *   Log a message
+        */
+        private void LogMessage(Message msg)
+        {
             // parse message
             string channel = msg.Channel.Name;
             ulong cId = msg.Channel.Id;
@@ -172,7 +249,7 @@ namespace DiscordLogger
             text = text.Replace(",", "$");
 
             // check for attachments
-            Message.Attachment[] att = e.Message.Attachments;
+            Message.Attachment[] att = msg.Attachments;
             char hasFile = 'n';
             if (att.Length > 0 ||
                 text.Contains(".jpg") || text.Contains(".png") || text.Contains(".gif"))
@@ -180,9 +257,9 @@ namespace DiscordLogger
                 hasFile = 'y';
             }
 
-
             // write line to file
-            string newLine = string.Format("\"{0:g}\",\"{1}\",\"{2}\",\"{3}\",\"{4}\",\"{5}\",\"{6}\"", 
+            StringBuilder csv = new StringBuilder();
+            string newLine = string.Format("\"{0:g}\",\"{1}\",\"{2}\",\"{3}\",\"{4}\",\"{5}\",\"{6}\"",
                                             time, channel, cId, user, uId, hasFile, text);
             csv.AppendLine(newLine);
 
@@ -196,7 +273,8 @@ namespace DiscordLogger
 
             try
             {
-                File.AppendAllText(filename, csv.ToString());
+                string file = string.Format("{0}{1:yyyy-MM-dd}{2}", filename, now, fileExt);
+                File.AppendAllText(file, csv.ToString());
             }
             catch (Exception err)
             {
@@ -224,48 +302,41 @@ namespace DiscordLogger
                 if (counters["total"] % COUNTER_LOG_INTERVAL == 0)
                     LogCounters();
 
-                DateTime now = DateTime.UtcNow;
+                now = DateTime.UtcNow;
                 timeNow.Content = string.Format("Last MSG: {0:MM/dd HH:mm:ss}", now);
 
-                TimeSpan duration = now - sessionStartTime;
+                TimeSpan duration = now - programStartTime;
                 elapsedTime.Content = string.Format("Time Elapsed: {0}days, {1:00}:{2:00}:{3:00}",
                                             duration.Days,
                                             duration.Hours,
                                             duration.Minutes,
                                             duration.Seconds);
-                
 
-                counter0.Content = counters["total"];
-                counter1.Content = counters["general"];
-                counter2.Content = counters["miscellaneous"];
-                counter3.Content = counters["advice-serious"];
-                counter4.Content = counters["meta"];
-                counter5.Content = counters["anime-manga"];
-                counter6.Content = counters["games"];
-                counter7.Content = counters["kancolle"];
-                counter8.Content = counters["idol-heaven"];
-                counter9.Content = counters["fanart"];
-                counter10.Content = counters["nsfw"];
-                counter11.Content = counters["skynet"];
-                counter12.Content = counters["other"];
-
-
-                sessionCounter0.Content = counters["total"] - sessionOffset[0];
-                sessionCounter1.Content = counters["general"] - sessionOffset[1];
-                sessionCounter2.Content = counters["miscellaneous"] - sessionOffset[2];
-                sessionCounter3.Content = counters["advice-serious"] - sessionOffset[3];
-                sessionCounter4.Content = counters["meta"] - sessionOffset[4];
-                sessionCounter5.Content = counters["anime-manga"] - sessionOffset[5];
-                sessionCounter6.Content = counters["games"] - sessionOffset[6];
-                sessionCounter7.Content = counters["kancolle"] - sessionOffset[7];
-                sessionCounter8.Content = counters["idol-heaven"] - sessionOffset[8];
-                sessionCounter9.Content = counters["fanart"] - sessionOffset[9];
-                sessionCounter10.Content = counters["nsfw"] - sessionOffset[10];
-                sessionCounter11.Content = counters["skynet"] - sessionOffset[11];
-                sessionCounter12.Content = counters["other"] - sessionOffset[12];
+                // update counter labels
+                for (int i = 0; i < counters.Count; i++)
+                {
+                    totalCounterLabels[i].Content = counters[channels[i]];
+                    sessionCounterLabels[i].Content = counters[channels[i]] - sessionOffset[i];
+                }
             });
         }
 
+
+        /*
+        *   Send a status update when prompted by admin/founder
+        */
+        async private void SendUpdateMsg(Channel channel)
+        {
+            string status = "Total Messages\n";
+
+            for (int i = 0; i < counters.Count; i++)
+            {
+                status += counters[channels[i]] + "   " + channels[i] + "\n";
+            }
+
+            await channel.SendMessage(status);
+
+        }
 
         /*
         *   Log the counters to a file
@@ -283,24 +354,56 @@ namespace DiscordLogger
 
 
         /*
-        *   Load total counters from file
+        *   Callback for timer to reset session everyday
         */
-        void LoadCounters()
+        async void NewDay(Object obj)
         {
-            string[] counterData = File.ReadAllLines(counterLog);
 
-            foreach(string countertext in counterData)
-            {   
-                // split on space, then read key value pair
-                string[] channel = countertext.Split(' ');
-                counters[channel[0]] = Int32.Parse(channel[1]);
+            string update = string.Format("Daily Update for {0:yyyy/MM/dd}\n", DateTime.UtcNow.AddDays(-1));
+
+            for (int i = 0; i < counters.Count; i++)
+            {
+                update += (counters[channels[i]]-sessionOffset[i]) + "   " + channels[i] + "\n";
             }
 
-            // set session offsets properly
+            File.AppendAllText(statuslog, update);
+
+            Channel botNetChan = client.GetChannel(145310829590478849);
+            await botNetChan.SendMessage(update);
+
             ResetSession(null, null);
         }
 
+        /*
+        *   Reset session counter by saving the offset
+        */
+        private void ResetSession(object sender, RoutedEventArgs e)
+        {
+            // save offset
+            for (int i = 0; i < counters.Count; i++)
+            {
+                sessionOffset[i] = counters[channels[i]];
+            }
 
+            Application.Current.Dispatcher.Invoke(() =>
+            {
+                sessionStartTime = DateTime.UtcNow;
+                sessionTime.Content = string.Format("Session Started: {0:MM/dd HH:mm:ss}", sessionStartTime);
+                
+                // reset session counters on GUI
+                foreach (Label sessionCounter in sessionCounterLabels)
+                {
+                    sessionCounter.Content = 0;
+                }
+            });
+        }
+
+
+        #region SETUP FUNCTIONS
+
+        /*
+        *   Initial setup
+        */
         void AddCounters()
         {
             counters.Add("total", 0);
@@ -317,70 +420,56 @@ namespace DiscordLogger
             counters.Add("skynet", 0);
             counters.Add("other", 0);
 
-            // add totalLabels to array
-            totalCounters.Add(counter0);
-            totalCounters.Add(counter1);
-            totalCounters.Add(counter2);
-            totalCounters.Add(counter3);
-            totalCounters.Add(counter4);
-            totalCounters.Add(counter5);
-            totalCounters.Add(counter6);
-            totalCounters.Add(counter7);
-            totalCounters.Add(counter8);
-            totalCounters.Add(counter9);
-            totalCounters.Add(counter10);
-            totalCounters.Add(counter11);
-            totalCounters.Add(counter12);
+            channels = counters.Keys.ToArray();
 
+            // add totalLabels to list
+            totalCounterLabels.Add(counter0);
+            totalCounterLabels.Add(counter1);
+            totalCounterLabels.Add(counter2);
+            totalCounterLabels.Add(counter3);
+            totalCounterLabels.Add(counter4);
+            totalCounterLabels.Add(counter5);
+            totalCounterLabels.Add(counter6);
+            totalCounterLabels.Add(counter7);
+            totalCounterLabels.Add(counter8);
+            totalCounterLabels.Add(counter9);
+            totalCounterLabels.Add(counter10);
+            totalCounterLabels.Add(counter11);
+            totalCounterLabels.Add(counter12);
 
-            // add sessionLabels to array
-            sessionCounters[0] = sessionCounter0;
-            sessionCounters[1] = sessionCounter1;
-            sessionCounters[2] = sessionCounter2;
-            sessionCounters[3] = sessionCounter3;
-            sessionCounters[4] = sessionCounter4;
-            sessionCounters[5] = sessionCounter5;
-            sessionCounters[6] = sessionCounter6;
-            sessionCounters[7] = sessionCounter7;
-            sessionCounters[8] = sessionCounter8;
-            sessionCounters[9] = sessionCounter9;
-            sessionCounters[10] = sessionCounter10;
-            sessionCounters[11] = sessionCounter11;
-            sessionCounters[12] = sessionCounter12;
+            // add sessionLabels to list
+            sessionCounterLabels.Add(sessionCounter0);
+            sessionCounterLabels.Add(sessionCounter1);
+            sessionCounterLabels.Add(sessionCounter2);
+            sessionCounterLabels.Add(sessionCounter3);
+            sessionCounterLabels.Add(sessionCounter4);
+            sessionCounterLabels.Add(sessionCounter5);
+            sessionCounterLabels.Add(sessionCounter6);
+            sessionCounterLabels.Add(sessionCounter7);
+            sessionCounterLabels.Add(sessionCounter8);
+            sessionCounterLabels.Add(sessionCounter9);
+            sessionCounterLabels.Add(sessionCounter10);
+            sessionCounterLabels.Add(sessionCounter11);
+            sessionCounterLabels.Add(sessionCounter12);
         }
 
         /*
-        *   Reset session counter by saving the offset
-        *
+        *   Load total counters from file
         */
-        private void ResetSession(object sender, RoutedEventArgs e)
+        void LoadCounters()
         {
-            // save offset
-            sessionOffset[0] = counters["total"];
-            sessionOffset[1] = counters["general"];
-            sessionOffset[2] = counters["miscellaneous"];
-            sessionOffset[3] = counters["advice-serious"];
-            sessionOffset[4] = counters["meta"];
-            sessionOffset[5] = counters["anime-manga"];
-            sessionOffset[6] = counters["games"];
-            sessionOffset[7] = counters["kancolle"];
-            sessionOffset[8] = counters["idol-heaven"];
-            sessionOffset[9] = counters["fanart"];
-            sessionOffset[10] = counters["nsfw"];
-            sessionOffset[11] = counters["skynet"];
-            sessionOffset[12] = counters["other"];
+            string[] counterData = File.ReadAllLines(counterLog);
 
-            Application.Current.Dispatcher.Invoke(() =>
+            foreach (string countertext in counterData)
             {
-                sessionStartTime = DateTime.UtcNow;
-                sessionTime.Content = string.Format("Session Started: {0:MM/dd HH:mm:ss}", sessionStartTime);
-                
-                // reset session counters on GUI
-                foreach (Label sessionCounter in sessionCounters)
-                {
-                    sessionCounter.Content = 0;
-                }
-            });
+                // split on space, then read key value pair
+                string[] channel = countertext.Split(' ');
+                counters[channel[0]] = Int32.Parse(channel[1]);
+            }
+
+            // set session offsets properly
+            ResetSession(null, null);
         }
+        #endregion
     }
 }
