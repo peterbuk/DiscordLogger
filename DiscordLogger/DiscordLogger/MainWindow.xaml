@@ -41,7 +41,7 @@
             <Label x:Name="startTime" Content="Program Started:" HorizontalAlignment="Left" VerticalAlignment="Top" Width="204" HorizontalContentAlignment="Right" Canvas.Left="303" Canvas.Top="77"/>
             <Label x:Name="timeNow" Content="Last MSG:" HorizontalAlignment="Left" VerticalAlignment="Top" Width="204" HorizontalContentAlignment="Right" Canvas.Left="303" Canvas.Top="124"/>
             <Label x:Name="errorLog" Content="" HorizontalAlignment="Left" VerticalAlignment="Top" Height="128" Width="214" FontSize="8" Canvas.Left="303" Canvas.Top="184"/>
-            <Button x:Name="buttonReset" Content="Reset Session" HorizontalAlignment="Left" VerticalAlignment="Top" Width="87" Click="ResetSession" Canvas.Left="420" Canvas.Top="32"/>
+            <Button x:Name="buttonReset" Content="Reset Session" HorizontalAlignment="Left" VerticalAlignment="Top" Width="87" Click="ResetSession" Canvas.Left="420" Canvas.Top="32" Visibility="Collapsed"/>
             <Label x:Name="sessionTime" Content="Session Started:" HorizontalAlignment="Left" VerticalAlignment="Top" Width="194" HorizontalContentAlignment="Right" Canvas.Left="313" Canvas.Top="101"/>
             <Label x:Name="elapsedTime" Content="Time Elapsed:" HorizontalAlignment="Left" VerticalAlignment="Top" Width="204" HorizontalContentAlignment="Right" Canvas.Left="303" Canvas.Top="150"/>
         </Canvas>

@@ -36,12 +36,17 @@ namespace DiscordLogger
         string loginfile = "C:\\dlogs\\login.txt";  // lol username/password in plain text
         string filename = "C:\\dlogs\\log-";
         string fileExt = ".csv";
-        string counterLog = "C:\\dlogs\\counter.txt";
+        string totalCounterFile = "C:\\dlogs\\totalcounter.txt";
+        string sessionCounterFile = "C:\\dlogs\\sessioncounter.txt";
         string statuslog = "C:\\dlogs\\status.txt";
+        string summaryLog = "C:\\dlogs\\summarylog.txt";
 
         Role admin;
         Role founder;
         bool gotRoles = false;
+        ulong botnetChannelId = 145310829590478849;
+        ulong kancolleChannelId = 137807564028116993;
+        Channel botNetChan;
 
         string username;
         string password;
@@ -56,6 +61,9 @@ namespace DiscordLogger
         DateTime nextDay;
         Timer dateTimer;
 
+        Timer pvpTimer;
+        DateTime eventEnd;
+
         public MainWindow()
         {
             InitializeComponent();
@@ -66,13 +74,21 @@ namespace DiscordLogger
             totalCounterLabels = new List<Label>();
 
             now = DateTime.UtcNow;
-            nextDay = now.AddDays(1);   // used to reset session everyday
+            nextDay = DateTime.UtcNow.Date.AddDays(1); // used to reset session everyday
+            
+            
             dateTimer = new Timer(NewDay, null, nextDay - now, TimeSpan.FromHours(24));
+            pvpTimer = new Timer(PvpAlert, null, NextPvp() - now, TimeSpan.FromHours(12));
 
+            eventEnd = new DateTime(2016, 5, 27, 2, 0, 0);
+
+            //MessageBox.Show("now is " + now.ToLongDateString() + " " + now.ToLongTimeString() + "event countdown " + NextPvp().ToLongDateString() + " " + NextPvp().ToLongTimeString());
+            
             AddCounters();
 
             loggerCanvas.Visibility = Visibility.Collapsed;
             connectCanvas.Visibility = Visibility.Visible;
+            botNetChan = client.GetChannel(botnetChannelId);
 
             buttonLogin.Click += ButtonLogin_Click;
             this.Closing += MainWindow_Closing;
@@ -80,6 +96,8 @@ namespace DiscordLogger
             client.MessageReceived += Client_MessageReceived;
             client.GatewaySocket.Disconnected += GatewaySocket_Disconnected;
             client.GatewaySocket.Connected += GatewaySocket_Connected;
+            //client.UserJoined += Client_UserJoined;
+            //client.UserUpdated += Client_UserUpdated;
 
             // preload username/pw cause lazy
             if (File.Exists(loginfile))
@@ -90,7 +108,46 @@ namespace DiscordLogger
             }
         }
 
+        private void Client_UserJoined(object sender, UserEventArgs e)
+        {
+            string message = "";
+            if (e != null)
+                message = "`New user: \"" + e.User.Name + "\" has joined!`";
+            else
+                message = "`New user: has joined!`";
 
+            SendMsg(botNetChan, message);
+        }
+
+
+        #region Kancolle
+        // used to determine next pvp time
+        private DateTime NextPvp()
+        {
+            DateTime now = DateTime.UtcNow;
+
+            if (now.Hour < 5)
+                return DateTime.UtcNow.Date.AddHours(5);
+            else if (now.Hour < 17)
+                return DateTime.UtcNow.Date.AddHours(17);
+            else // next day
+                return DateTime.UtcNow.Date.AddDays(1).AddHours(5);
+        }
+
+
+        void PvpAlert(Object obj)
+        {
+            string alert = string.Format("```****************************\nPVP ALERT: RESET IN ONE HOUR\n****************************```");
+            Channel kanChan = client.GetChannel(kancolleChannelId);
+            SendMsg(kanChan, alert);
+        }
+
+
+        void EventStart(Object obj)
+        {
+
+        }
+        #endregion
 
         /*
         *   Warning when user tries to close   
@@ -99,6 +156,7 @@ namespace DiscordLogger
         {
             if (MessageBox.Show("Do you want to exit?", "Confirm", MessageBoxButton.YesNo) == MessageBoxResult.Yes)
             {
+                LogCounters();
                 Application.Current.Shutdown();
             }
             else
@@ -199,38 +257,48 @@ namespace DiscordLogger
             if (!gotRoles)
                 GetRoles(e);
 
-            // don't log own messages
-            if (msg.IsAuthor)
-                return;
+            /* 
+            eter only commands
+            if (msg.IsMentioningMe() && msg.User.Id == 105167204500123648)
+            {
+            }
+            //*/
 
-            // status update TODO: expand to admins/founders
-            //msg.User.Id == 105167204500123648
+            // update command
             if (msg.IsMentioningMe() && (msg.User.HasRole(admin) || msg.User.HasRole(founder)))
             {
-                if (msg.Text.Contains("~status"))
+                if (msg.Text.Contains("~update"))
                 {
                     SendUpdateMsg(e.Channel);
-                    File.WriteAllText(statuslog, string.Format("{0} called ~status at {1:MM/dd HH:mm:ss}", msg.User.Name, msg.Timestamp));
+                    File.AppendAllText(statuslog, string.Format("{0} called ~update at {1:MM/dd HH:mm:ss}\n", msg.User.Name, msg.Timestamp));
                 }
+                return;
             }
+
+            if (msg.Text.Contains("~event time") && msg.Channel.Id == 137807564028116993)
+            {
+                TimeSpan countdown = eventEnd - DateTime.UtcNow;
+
+                string reply = string.Format("`Time left for event: {0} days {1} hours {2} mins {3} secs`", countdown.Days, countdown.Hours, countdown.Minutes, countdown.Seconds);
+                SendMsg(msg.Channel, reply);
+            }
+
+
+
+            // don't log own messages or messages from bot-log
+            if (msg.IsAuthor || msg.Channel.Id == botnetChannelId)
+                return;
+
             LogMessage(msg);
         }
 
-
         /*
-        *   Fetch the roles of admin/founder
+        *   Send a message to a channel
         */
-        private void GetRoles(MessageEventArgs e)
+        async private void SendMsg(Channel channel, string message)
         {
-            IEnumerable<Role> roles = e.Server.Roles;
-            foreach (Role role in roles)
-            {
-                if (role.Name == "@Admin")
-                    admin = role;
-                if (role.Name == "@founder")
-                    founder = role;
-            }
-            gotRoles = true;
+            if (channel != null && message != null)
+                await channel.SendMessage(message);
         }
 
 
@@ -326,19 +394,25 @@ namespace DiscordLogger
 
 
         /*
-        *   Send a status update when prompted by admin/founder
+        *   Send a status update when prompted by admin/founder or by daily update
         */
-        async private void SendUpdateMsg(Channel channel)
+        private void SendUpdateMsg(Channel channel, string update="")
         {
-            string status = "Total Messages\n";
+            update += string.Format("\n Messages since {0:yyyy/MM/dd HH:mm:ss}\n--------------------------\n", sessionStartTime);
 
             for (int i = 0; i < counters.Count; i++)
             {
-                status += counters[channels[i]] + "   " + channels[i] + "\n";
+                update += (counters[channels[i]] - sessionOffset[i]) + "   " + channels[i] + "\n";
             }
 
-            await channel.SendMessage(status);
+            update += "\nTotal messages logged\n--------------------------\n";
 
+            for (int i = 0; i < counters.Count; i++)
+            {
+                update += counters[channels[i]] + "   " + channels[i] + "\n";
+            }
+
+            SendMsg(channel, update);
         }
 
         /*
@@ -352,30 +426,41 @@ namespace DiscordLogger
                 sb.AppendLine(counter.Key +" "+counter.Value);
             }
             
-            File.WriteAllText(counterLog, sb.ToString());
+            File.WriteAllText(totalCounterFile, sb.ToString());
+
+            sb.Clear();
+            int[] counts = counters.Values.ToArray();
+            for (int i =0; i < sessionOffset.Length; i++)
+            {
+                sb.AppendLine(sessionOffset[i].ToString());
+            }
+
+            File.WriteAllText(sessionCounterFile, sb.ToString());
         }
 
 
         /*
         *   Callback for timer to reset session everyday
         */
-        async void NewDay(Object obj)
+        void NewDay(Object obj)
         {
-
-            string update = string.Format("Daily Update for {0:yyyy/MM/dd}\n", DateTime.UtcNow.AddDays(-1));
+            // log session counters to file
+            string dayLog = string.Format("\nLog for session {0:yyyy/MM/dd}\n", sessionStartTime);
 
             for (int i = 0; i < counters.Count; i++)
             {
-                update += (counters[channels[i]]-sessionOffset[i]) + "   " + channels[i] + "\n";
+                dayLog += (counters[channels[i]]-sessionOffset[i]) + "   " + channels[i] + "\n";
             }
+            File.AppendAllText(summaryLog, dayLog);
 
-            File.AppendAllText(statuslog, update);
-
-            Channel botNetChan = client.GetChannel(145310829590478849);
-            await botNetChan.SendMessage(update);
+            string update = string.Format("{0:yyyy/MM/dd} Daily Update!\n==========================\n", sessionStartTime);
+            Channel botNetChan = client.GetChannel(botnetChannelId);
+            SendUpdateMsg(botNetChan, update);
 
             ResetSession(null, null);
         }
+
+
 
         /*
         *   Reset session counter by saving the offset
@@ -398,6 +483,8 @@ namespace DiscordLogger
                 {
                     sessionCounter.Content = 0;
                 }
+
+                errorLog.Content += "Session restarted";
             });
         }
 
@@ -415,7 +502,7 @@ namespace DiscordLogger
             counters.Add("advice-serious", 0);
             counters.Add("meta", 0);
             counters.Add("anime-manga", 0);
-            counters.Add("games", 0);
+            counters.Add("games-sports", 0);
             counters.Add("kancolle", 0);
             counters.Add("idol-heaven", 0);
             counters.Add("fanart", 0);
@@ -461,9 +548,9 @@ namespace DiscordLogger
         */
         void LoadCounters()
         {
-            if (File.Exists(counterLog))
+            if (File.Exists(totalCounterFile))
             { 
-                string[] counterData = File.ReadAllLines(counterLog);
+                string[] counterData = File.ReadAllLines(totalCounterFile);
 
                 foreach (string countertext in counterData)
                 {
@@ -475,6 +562,34 @@ namespace DiscordLogger
                 // set session offsets properly
                 ResetSession(null, null);
             }
+
+            if (File.Exists(sessionCounterFile))
+            {
+                string[] counterData = File.ReadAllLines(sessionCounterFile);
+
+                for (int i = 0; i < counterData.Length; i++)
+                {
+                    // split on space, then read key value pair
+                    sessionOffset[i] = Int32.Parse(counterData[i]);
+                }
+            }
+        }
+
+
+        /*
+        *   Fetch the roles of admin/founder
+        */
+        private void GetRoles(MessageEventArgs e)
+        {
+            IEnumerable<Role> roles = e.Server.Roles;
+            foreach (Role role in roles)
+            {
+                if (role.Name == "@Admin")
+                    admin = role;
+                if (role.Name == "@founder")
+                    founder = role;
+            }
+            gotRoles = true;
         }
         #endregion
     }
